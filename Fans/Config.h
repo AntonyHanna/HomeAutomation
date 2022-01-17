@@ -3,8 +3,8 @@
 
 // Remote config
 #define TOTAL_FAN_SPEEDS 4
-#define SPEED_MAPPINGS\
-    1149,\
+#define SPEED_MAPPINGS\ /* the indexes represent the various speeds */
+    1149,\ 
     1143,\
     1135,\
     1119

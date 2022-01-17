@@ -33,6 +33,7 @@ struct GenericFan : Service::Fan {
       if (active->isUpdated || rotationSpeed->isUpdated) {
         int _speed = active->getNewVal() * rotationSpeed->getNewVal();
         int msg = this->speed_mappings[_speed];
+        
         this->radio->send(msg);
       }
 
