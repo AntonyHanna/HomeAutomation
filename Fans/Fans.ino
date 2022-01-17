@@ -1,18 +1,14 @@
 #include "HomeSpan.h"
 #include "GenericFan.h"
-
-#define TOTAL_FAN_SPEEDS 4
+#include "Config.h"
 
 void setup() {
   Serial.begin(115200);
   homeSpan.begin(Category::Fans, "Ceiling Fan");
   PrepareAccessory();
 
-  int speed_mappings[] = new int[TOTAL_FAN_SPEEDS]{
-    1149,
-    1143,
-    1135,
-    1119
+  int *speed_mappings = new int[TOTAL_FAN_SPEEDS]{
+    SPEED_MAPPINGS
   };
   
   new GenericFan(TOTAL_FAN_SPEEDS, speed_mappings);

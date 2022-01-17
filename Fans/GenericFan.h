@@ -3,8 +3,7 @@
 
 #include "RFRadio.h"
 #include "HomeSpan.h"
-
-//#define CHANGE_ROTATION 1
+#include "Config.h"
 
 struct GenericFan : Service::Fan {
   private:

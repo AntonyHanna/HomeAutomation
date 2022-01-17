@@ -2,11 +2,8 @@
 #define RF_RADIO_H
 
 #include <RCSwitch.h>
+#include "Config.h"
 
-#define RADIO_TX_PIN 2
-#define TX_PROTOCOL 11
-#define RADIO_PULSE_LENGTH 339
-#define RADIO_TX_MESSAGE_BITS 12
 
 struct RFRadio {
   RCSwitch rc_switch;
