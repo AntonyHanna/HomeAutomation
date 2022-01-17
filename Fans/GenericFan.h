@@ -7,77 +7,45 @@
 //#define CHANGE_ROTATION 1
 
 struct GenericFan : Service::Fan {
-  RFRadio radio;
+  private:
+    RFRadio *radio;
+    int fan_speeds;
+    int change_rotation;
+    int *speed_mappings;
 
-  SpanCharacteristic *active;
-  SpanCharacteristic *rotationDirection;
-  SpanCharacteristic *rotationSpeed;
+    SpanCharacteristic *active;
+    SpanCharacteristic *rotationDirection;
+    SpanCharacteristic *rotationSpeed;
 
-  GenericFan(RFRadio *_radio) : Service::Fan()
-  {
-    this->radio = *_radio;
+  public:
+    // speeds count should include off
+    GenericFan(int speeds, int *speeds_map) : Service::Fan()
+    {
+      this->radio = new RFRadio();
+      this->fan_speeds = speeds;
+      this->speed_mappings = speeds_map;
 
-    active = new Characteristic::Active();
-    rotationSpeed = new Characteristic::RotationSpeed(1);
-    rotationSpeed->setRange(0, 3, 1);
-  }
-
-  boolean update() {
-    if (active->isUpdated || rotationSpeed->isUpdated) {
-      int _speed = active->getNewVal() * rotationSpeed->getNewVal();
-      //      switch (_speed)
-      //      {
-      //        case 0:
-      //          this->rcSwitch.send(2196481, 24);
-      //          break;
-      //
-      //        case 1:
-      //          this->rcSwitch.send(2196480, 24);
-      //          break;
-      //
-      //        case 2:
-      //          this->rcSwitch.send(2196501, 24);
-      //          break;
-      //
-      //        case 3:
-      //          this->rcSwitch.send(2196493, 24);
-      //          break;
-      //
-      //        case 4:
-      //          this->rcSwitch.send(2196489, 24);
-      //          break;
-      //
-      //        case 5:
-      //          this->rcSwitch.send(2196490, 24);
-      //          break;
-      //      }
-
-      switch (_speed) {
-        case 0:
-          this->radio.send(1149);
-          break;
-
-        case 1:
-          this->radio.send(1143);
-          break;
-
-        case 2:
-          this->radio.send(1135);
-          break;
-
-        case 3:
-          this->radio.send(1119);
-          break;
-      }
+      active = new Characteristic::Active();
+      rotationSpeed = new Characteristic::RotationSpeed(1);
+      rotationSpeed->setRange(0, fan_speeds - 1, 1);
     }
+
+    boolean update() {
+      if (active->isUpdated || rotationSpeed->isUpdated) {
+        int _speed = active->getNewVal() * rotationSpeed->getNewVal();
+        int msg = this->speed_mappings[_speed];
+        this->radio->send(msg);
+      }
+
 #ifdef CHANGE_ROTATION
-        else if (rotationDirection->isUpdated)
-        {
-          this->rcSwitch.send(2196494, 24);
-        }
+      else if (rotationDirection->isUpdated)
+      {
+        this->radio->send(rotation_signal);
+      }
 #endif
-    return true;
-  }
+
+      return true;
+    }
 };
 
 #endif
