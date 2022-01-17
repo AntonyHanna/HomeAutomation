@@ -4,6 +4,8 @@
 #include "RFRadio.h"
 #include "HomeSpan.h"
 
+//#define CHANGE_ROTATION 1
+
 struct GenericFan : Service::Fan {
   RFRadio radio;
 
@@ -68,12 +70,12 @@ struct GenericFan : Service::Fan {
           break;
       }
     }
-
-    //    else if (rotationDirection->isUpdated)
-    //    {
-    //      this->rcSwitch.send(2196494, 24);
-    //    }
-
+#ifdef CHANGE_ROTATION
+        else if (rotationDirection->isUpdated)
+        {
+          this->rcSwitch.send(2196494, 24);
+        }
+#endif
     return true;
   }
 };
