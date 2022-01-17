@@ -1,25 +1,26 @@
-#include <RCSwitch.h>
+#ifndef GENERIC_FAN_H
+#define GENERIC_FAN_H
+
+#include "RFRadio.h"
 #include "HomeSpan.h"
 
 struct GenericFan : Service::Fan {
-  RCSwitch rcSwitch;
+  RFRadio radio;
 
   SpanCharacteristic *active;
   SpanCharacteristic *rotationDirection;
   SpanCharacteristic *rotationSpeed;
 
-  GenericFan(RCSwitch _rcSwitch) : Service::Fan()
+  GenericFan(RFRadio *_radio) : Service::Fan()
   {
-    
-    this->rcSwitch = _rcSwitch;
+    this->radio = *_radio;
 
     active = new Characteristic::Active();
     rotationSpeed = new Characteristic::RotationSpeed(1);
     rotationSpeed->setRange(0, 3, 1);
   }
 
-  static void begin()
-  {
+  static void begin() {
     new SpanAccessory();
 
     new Service::AccessoryInformation();
@@ -34,10 +35,8 @@ struct GenericFan : Service::Fan {
     new Characteristic::Version("1.1.0");
   }
 
-  boolean update()
-  {
-    if (active->isUpdated || rotationSpeed->isUpdated)
-    {
+  boolean update() {
+    if (active->isUpdated || rotationSpeed->isUpdated) {
       int _speed = active->getNewVal() * rotationSpeed->getNewVal();
       //      switch (_speed)
       //      {
@@ -66,22 +65,21 @@ struct GenericFan : Service::Fan {
       //          break;
       //      }
 
-      switch (_speed)
-      {
+      switch (_speed) {
         case 0:
-          this->rcSwitch.send(1149, 12);
+          this->radio.send(1149);
           break;
 
         case 1:
-          this->rcSwitch.send(1143, 12);
+          this->radio.send(1143);
           break;
 
         case 2:
-          this->rcSwitch.send(1135, 12);
+          this->radio.send(1135);
           break;
 
         case 3:
-          this->rcSwitch.send(1119, 12);
+          this->radio.send(1119);
           break;
       }
     }
@@ -94,3 +92,5 @@ struct GenericFan : Service::Fan {
     return true;
   }
 };
+
+#endif

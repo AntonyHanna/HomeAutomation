@@ -1,26 +1,16 @@
-#include <RCSwitch.h>
 #include "HomeSpan.h"
-#include "GenericFan.cpp"
-
-RCSwitch mySwitch = RCSwitch();
+#include "GenericFan.h"
+#include "RFRadio.h"
 
 void setup() {
   Serial.begin(115200);
   homeSpan.begin(Category::Fans, "Ceiling Fan");
+  RFRadio *rf = new RFRadio();
 
   GenericFan::begin();
-
-  mySwitch.enableTransmit(2);
-
-  // Optional set protocol (default is 1, will work for most outlets)
-  mySwitch.setProtocol(11);
-
-  // Optional set pulse length.
-  mySwitch.setPulseLength(332);
-
-  new GenericFan(mySwitch);
+  new GenericFan(rf);
 }
 
 void loop() {
-    homeSpan.poll();
+  homeSpan.poll();
 }
