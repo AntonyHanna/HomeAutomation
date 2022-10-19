@@ -2,21 +2,32 @@
 #define CONFIG_H
 
 // Remote config
-#define TOTAL_FAN_SPEEDS 4
-#define SPEED_MAPPINGS\ /* the indexes represent the various speeds */
-    1149,\ 
-    1143,\
-    1135,\
-    1119
-
 // Fan Accesory config
+//#define FAN_ENABLED 1
+#ifdef FAN_ENABLED
+
+#define TOTAL_FAN_SPEEDS 6
+#define SPEED_MAPPINGS \
+  2196481,\
+  2196480,\
+  2196501,\
+  2196493,\
+  2196489,\
+  2196490
+
+
+
 //#define CHANGE_ROTATION 1
+#ifdef CHANGE_ROTATION
+#define CHANGE_ROTATION_MSG 2196494
+#endif
+#endif
 
 // RF Radio config
 #define RADIO_TX_PIN 2
-#define TX_PROTOCOL 11
-#define RADIO_PULSE_LENGTH 339
-#define RADIO_TX_MESSAGE_BITS 12
+#define TX_PROTOCOL 1
+#define RADIO_PULSE_LENGTH 256
+#define RADIO_TX_MESSAGE_BITS 24
 
 // Temperature & Humidity config
 //#define TEMPERATURE_ENABLED 1
