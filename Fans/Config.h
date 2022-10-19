@@ -33,4 +33,9 @@
 #ifdef GARAGEDOOROPENER_ENABLED
 #endif
 
+//#define WINDOWCOVERING_ENABLED 1
+#ifdef WINDOWCOVERING_ENABLED
+#endif
+
+// root endif
 #endif
