@@ -18,6 +18,16 @@
 #define RADIO_PULSE_LENGTH 339
 #define RADIO_TX_MESSAGE_BITS 12
 
+// Temperature & Humidity config
+//#define TEMPERATURE_ENABLED 1
+//#define HUMIDITY_ENABLED 1
+
+#ifdef TEMPERATURE_ENABLED || HUMIDITY_ENABLED
+#define DHTPIN 4
+#define DHTTYPE DHT11
+#define SENSOR_POLL_RATE 2100 /* requires at least 1000ms per poll*/
+#endif
+
 // Garage Door Opener Config
 //#define GARAGEDOOROPENER_ENABLED 1
 #ifdef GARAGEDOOROPENER_ENABLED
