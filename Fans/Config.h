@@ -28,6 +28,11 @@
 #define SENSOR_POLL_RATE 2100 /* requires at least 1000ms per poll*/
 #endif
 
+#define DOOR_ENABLED 1
+#ifdef DOOR_ENABLED
+#endif
+
+
 // Garage Door Opener Config
 //#define GARAGEDOOROPENER_ENABLED 1
 #ifdef GARAGEDOOROPENER_ENABLED
