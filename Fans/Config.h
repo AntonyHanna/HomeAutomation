@@ -18,4 +18,9 @@
 #define RADIO_PULSE_LENGTH 339
 #define RADIO_TX_MESSAGE_BITS 12
 
+// Garage Door Opener Config
+//#define GARAGEDOOROPENER_ENABLED 1
+#ifdef GARAGEDOOROPENER_ENABLED
+#endif
+
 #endif
