@@ -27,20 +27,26 @@ struct GenericFan : Service::Fan {
       active = new Characteristic::Active();
       rotationSpeed = new Characteristic::RotationSpeed(1);
       rotationSpeed->setRange(0, fan_speeds - 1, 1);
+
+#ifdef CHANGE_ROTATION
+      rotationDirection = new Characteristic::RotationDirection(1);
+#endif
     }
 
     boolean update() {
-      if (active->isUpdated || rotationSpeed->isUpdated) {
-        int _speed = active->getNewVal() * rotationSpeed->getNewVal();
-        int msg = this->speed_mappings[_speed];
-        
-        this->radio->send(msg);
-      }
+      // these checks will enforce sending of messages only
+      // when state has been changed from the current
+
+      int _speed = active->getNewVal() * rotationSpeed->getNewVal();
+      int msg = this->speed_mappings[_speed];
+
+      this->radio->send(msg);
+      
 
 #ifdef CHANGE_ROTATION
-      else if (rotationDirection->isUpdated)
+      if (rotationSpeed->getNewVal() != rotationSpeed->getVal()&& rotationDirection->isUpdated)
       {
-        this->radio->send(rotation_signal);
+        this->radio->send(CHANGE_ROTATION_MSG);
       }
 #endif
 
