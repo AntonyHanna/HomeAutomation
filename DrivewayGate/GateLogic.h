@@ -1,10 +1,10 @@
 #include "HomeSpan.h"
+#include "AverageArray.h"
 
 #define OPEN_PIN 15
 #define DOOR_VOLTAGE_SENSOR 34
 #define ERROR_MARGIN 100
-//#define ADC_MAX_READ_VOLTAGE 3.3
-//#define ADC_MAX_ANALOG_VALUE 4095
+#define SAMPLE_RANGE 10
 #define GATE_CLOSE_DELAY_MS 13000
 
 struct DrivewayGate : Service::Door {
@@ -21,15 +21,9 @@ struct DrivewayGate : Service::Door {
       Closed  = 0
     };
 
-    enum class CurrentPositionRefs {
+    enum class PositionRefs {
       Closed = 0,
       Open = 1
-    };
-
-    enum class PositionStateRefs {
-      Closing = 0,
-      Opening = 1,
-      Stopped = 2
     };
 
 
@@ -57,21 +51,28 @@ struct DrivewayGate : Service::Door {
       }
 
       // Will update target value
-
+      Serial.println(this->TargetPosition->getVal());
       return true;
     }
 
     // might need a transition period where we look at voltage and wait 8 seconds then show state
     void loop() {
+      static AverageArray *array = NULL;
       static unsigned long transitionEndTime;
       static uint16_t previousVoltage;
-      static CurrentPositionRefs lastFullPositionState;
+      static PositionRefs lastFullPositionState;
 
       unsigned long currentTime = millis();
       uint16_t voltage = analogRead(DOOR_VOLTAGE_SENSOR);
-      Serial.println(voltage);
+      int avg = 0;
 
-      CurrentPositionRefs currentPositionState = DetermineState(voltage);
+      PositionRefs currentPositionState = DetermineState(voltage);
+
+      if(array == NULL) {
+        array = new AverageArray(SAMPLE_RANGE);
+      }
+
+      avg = array->Insert(voltage);
 
       // Determing opening and closing based on what the last primary state was
       // After transitional state
@@ -79,30 +80,22 @@ struct DrivewayGate : Service::Door {
 
       // Detect a voltage state change
       // --------|PREVIOUS - MARGIN|----|READING|----|PREVIOUS + MARGIN|-------- //
-      if(isWithinRange(voltage, previousVoltage, ERROR_MARGIN, ERROR_MARGIN)) {
-        // aye this looks pretty similar to last time
-        Serial.println("Ayo, this shit in the margin, ignoring...");
-      } else {
+      if(!isWithinRange(voltage, previousVoltage, ERROR_MARGIN, ERROR_MARGIN)) {
         Serial.print("This voltage: [");
         Serial.print(voltage);
         Serial.println("] is looking kinda SUS, entering transitioning state...");
-
-        switch (lastFullPositionState)
-        {
-          case CurrentPositionRefs::Open:
-            this->PositionState->setVal((uint16_t)PositionStateRefs::Closing);
-          break;
-
-          case CurrentPositionRefs::Closed:
-            this->PositionState->setVal((uint16_t)PositionStateRefs::Opening);
-          break;
-
-          default:
-            this->PositionState->setVal((uint16_t)PositionStateRefs::Stopped);
-          break;
-        }
+        Serial.println(avg);
 
         transitionEndTime = currentTime + GATE_CLOSE_DELAY_MS;
+      }
+
+      if(transitionEndTime) {
+        if(isWithinRange(avg, (uint16_t)GateRef::Opening, ERROR_MARGIN, ERROR_MARGIN)) {
+          this->TargetPosition->setVal((uint16_t)PositionRefs::Open);
+        }
+        else if (isWithinRange(avg, (uint16_t)GateRef::Closing, ERROR_MARGIN, ERROR_MARGIN)) {
+          this->TargetPosition->setVal((uint16_t)PositionRefs::Closed);
+        }
       }
 
       // Covers initial state of 0
@@ -114,9 +107,8 @@ struct DrivewayGate : Service::Door {
         transitionEndTime = 0;
       }
 
-      
-
       previousVoltage = voltage;
+      delay(500);
     }
     // prod values:
     // 2.1 open
@@ -124,14 +116,14 @@ struct DrivewayGate : Service::Door {
     // (0.7**) lower average opening
     // closed 0
 
-    CurrentPositionRefs DetermineState(uint8_t voltage) {
-      CurrentPositionRefs state;
+    PositionRefs DetermineState(uint16_t voltage) {
+      PositionRefs state;
 
       if(voltage >= (uint16_t)GateRef::Open)
-        state = CurrentPositionRefs::Open;
+        state = PositionRefs::Open;
 
-      if (voltage <= (uint16_t)GateRef::Closed + 50)
-        state = CurrentPositionRefs::Closed;
+      else if (voltage <= (uint16_t)GateRef::Closed + 50)
+        state = PositionRefs::Closed;
 
       return state;
     }
