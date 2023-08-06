@@ -19,8 +19,8 @@ void PrepareAccessory() {
 void setup() {
   Serial.begin(115200);
   WiFi.setSleep(false);
-
-  homeSpan.begin(Category::GarageDoorOpeners, "Garage Door");
+  homeSpan.enableOTA();
+  homeSpan.begin(Category::GarageDoorOpeners, "Garage Door", "GarageDoorOpener");
   PrepareAccessory();
 
   new GarageDoorLogic();

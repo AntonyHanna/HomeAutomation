@@ -66,7 +66,7 @@ public:
     static bool transitionStateSet;
 
    
-    bool currentDoorState = !digitalRead(INDUCTIVE_SENSOR_PIN);
+    bool currentDoorState = digitalRead(INDUCTIVE_SENSOR_PIN);
 
     if (lastDoorState != currentDoorState && !this->transitionEndTime)
       this->transitionEndTime = this->currentTime + GATE_CLOSE_DELAY_MS;
