@@ -19,8 +19,8 @@ void PrepareAccessory() {
 void setup() {
   Serial.begin(115200);
   WiFi.setSleep(false);
-
-  homeSpan.begin(Category::Doors, "Driveway Gate");
+  homeSpan.enableOTA();
+  homeSpan.begin(Category::Doors, "Driveway Gate", "DrivewayGate");
   PrepareAccessory();
 
   new DrivewayGate();
