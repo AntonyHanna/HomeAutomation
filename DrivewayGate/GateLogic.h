@@ -4,8 +4,9 @@
 #define OPEN_PIN 15
 #define DOOR_VOLTAGE_SENSOR 34
 #define ERROR_MARGIN 100
-#define SAMPLE_RANGE 10
+#define AVG_SAMPLE_SIZE 20
 #define GATE_CLOSE_DELAY_MS 13000
+#define SAMPLES_PER_SECOND 10
 
 struct DrivewayGate : Service::Door {
   private:
@@ -13,19 +14,20 @@ struct DrivewayGate : Service::Door {
     SpanCharacteristic *TargetPosition;
     SpanCharacteristic *PositionState;
 
-    // Outlines the various Vrefs provided by the gate during the various movement states
+    AverageArray *array;
+    unsigned long transitionEndTime;
+    unsigned long currentTime;
+
     enum class GateRef {
-      Open    = 800,
-      Opening = 400,
-      Closing = 266,
-      Closed  = 0
+      Open    = 0,
+      Transitioning = 300,
+      Closed  = 670
     };
 
     enum class PositionRefs {
       Closed = 0,
       Open = 1
     };
-
 
   public:
     DrivewayGate() : Service::Door()
@@ -40,6 +42,10 @@ struct DrivewayGate : Service::Door {
       pinMode(OPEN_PIN, OUTPUT);
       pinMode(DOOR_VOLTAGE_SENSOR, INPUT);
       digitalWrite(OPEN_PIN, LOW);
+
+      this->array = new AverageArray(AVG_SAMPLE_SIZE);
+      this->transitionEndTime = 0;
+      this->currentTime = millis();
     }
 
     boolean update() {
@@ -48,31 +54,28 @@ struct DrivewayGate : Service::Door {
         digitalWrite(OPEN_PIN, HIGH);
         delay(100);
         digitalWrite(OPEN_PIN, LOW);
+        
+        this->transitionEndTime = this->currentTime + GATE_CLOSE_DELAY_MS;
       }
 
-      // Will update target value
-      Serial.println(this->TargetPosition->getVal());
       return true;
     }
 
     // might need a transition period where we look at voltage and wait 8 seconds then show state
     void loop() {
-      static AverageArray *array = NULL;
-      static unsigned long transitionEndTime;
+      this->currentTime = millis();
+
       static uint16_t previousVoltage;
       static PositionRefs lastFullPositionState;
 
-      unsigned long currentTime = millis();
-      uint16_t voltage = analogRead(DOOR_VOLTAGE_SENSOR);
       int avg = 0;
+      uint16_t voltage = analogRead(DOOR_VOLTAGE_SENSOR);
+      avg = this->array->Insert(voltage);
 
-      PositionRefs currentPositionState = DetermineState(voltage);
+      Serial.print("Average: ");
+      Serial.println(avg);
 
-      if(array == NULL) {
-        array = new AverageArray(SAMPLE_RANGE);
-      }
-
-      avg = array->Insert(voltage);
+      PositionRefs currentPositionState = DetermineState(avg);
 
       // Determing opening and closing based on what the last primary state was
       // After transitional state
@@ -80,49 +83,45 @@ struct DrivewayGate : Service::Door {
 
       // Detect a voltage state change
       // --------|PREVIOUS - MARGIN|----|READING|----|PREVIOUS + MARGIN|-------- //
-      if(!isWithinRange(voltage, previousVoltage, ERROR_MARGIN, ERROR_MARGIN)) {
+      if(!isWithinRange(voltage, previousVoltage, ERROR_MARGIN, ERROR_MARGIN) && !this->transitionEndTime) {
         Serial.print("This voltage: [");
         Serial.print(voltage);
         Serial.println("] is looking kinda SUS, entering transitioning state...");
         Serial.println(avg);
 
-        transitionEndTime = currentTime + GATE_CLOSE_DELAY_MS;
+        this->transitionEndTime = this->currentTime + GATE_CLOSE_DELAY_MS;
       }
 
-      if(transitionEndTime) {
-        if(isWithinRange(avg, (uint16_t)GateRef::Opening, ERROR_MARGIN, ERROR_MARGIN)) {
-          this->TargetPosition->setVal((uint16_t)PositionRefs::Open);
-        }
-        else if (isWithinRange(avg, (uint16_t)GateRef::Closing, ERROR_MARGIN, ERROR_MARGIN)) {
-          this->TargetPosition->setVal((uint16_t)PositionRefs::Closed);
+      if(this->transitionEndTime) {
+        if(isWithinRange(avg, (uint16_t)GateRef::Transitioning, ERROR_MARGIN, ERROR_MARGIN)) {
+          if(this->CurrentPosition->getVal() == (uint16_t)PositionRefs::Open) {
+            this->TargetPosition->setVal((uint16_t)PositionRefs::Closed);
+          } else {
+            this->TargetPosition->setVal((uint16_t)PositionRefs::Open);
+          }
         }
       }
 
       // Covers initial state of 0
-      if(!transitionEndTime || currentTime >= transitionEndTime) {
+      if(!this->transitionEndTime || currentTime >= this->transitionEndTime) {
         this->CurrentPosition->setVal((uint16_t)currentPositionState);
         this->TargetPosition->setVal((uint16_t)currentPositionState);
 
         lastFullPositionState = currentPositionState;
-        transitionEndTime = 0;
+        this->transitionEndTime = 0;
       }
 
       previousVoltage = voltage;
-      delay(500);
+      delay(1000 / SAMPLES_PER_SECOND);
     }
-    // prod values:
-    // 2.1 open
-    // (1.05**) higher average closing
-    // (0.7**) lower average opening
-    // closed 0
 
     PositionRefs DetermineState(uint16_t voltage) {
       PositionRefs state;
 
-      if(voltage >= (uint16_t)GateRef::Open)
+      if(isWithinRange(voltage, (uint16_t)GateRef::Open, ERROR_MARGIN, ERROR_MARGIN)) 
         state = PositionRefs::Open;
 
-      else if (voltage <= (uint16_t)GateRef::Closed + 50)
+      else if(isWithinRange(voltage, (uint16_t)GateRef::Closed, ERROR_MARGIN, ERROR_MARGIN)) 
         state = PositionRefs::Closed;
 
       return state;
@@ -130,14 +129,6 @@ struct DrivewayGate : Service::Door {
     // --------|SECOND - MARGIN|----|FIRST|----|SECOND + MARGIN|-------- //
     // Is first value within range of second value
     bool isWithinRange(uint16_t first, uint16_t second, uint16_t upper_margin, uint16_t lower_margin) {
-      Serial.print("--------[");
-      Serial.print(second - lower_margin);
-      Serial.print("]----[");
-      Serial.print(first);
-      Serial.print("]----[");
-      Serial.print(second + upper_margin);
-      Serial.println("]--------");
-
       return second - lower_margin < first && second + upper_margin > first;
     }
 };
